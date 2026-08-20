@@ -61,7 +61,7 @@ export default async function SystemStatusPage() {
 
       <section className="panel mt-8 p-5 text-sm">
         <h2 className="font-semibold">Migration Readiness</h2>
-        <p className="mt-2 muted">Application source expects migration {result.data.migrations?.expectedLatest ?? "202608190001"}. Hosted migration application is verified during deployment with the Supabase CLI; migration history and credentials are not exposed through this page.</p>
+        <p className="mt-2 muted">Application source expects migration {result.data.migrations?.expectedLatest ?? "202608200001"}. Hosted migration application is verified during deployment with the Supabase CLI; migration history and credentials are not exposed through this page.</p>
       </section>
     </>
   );

@@ -5,7 +5,7 @@ import { PGlite } from "@electric-sql/pglite";
 import { describe, expect, it } from "vitest";
 
 describe("Phase 2C.2 production-shaped bounded-query performance", () => {
-  it("pages candidates and similarities without returning the 25,219-row universe", async () => {
+  it("pages candidates and similarities and returns all six bounded breakdowns from one call", async () => {
     const db = new PGlite();
     try {
       await db.exec("create role anon;create role authenticated;create role service_role;");
@@ -33,14 +33,21 @@ describe("Phase 2C.2 production-shaped bounded-query performance", () => {
       const similarityStart = performance.now();
       const similarities = await db.query<any>("select * from public.find_similar_historical_movers($1,10)", [target]);
       const similarityMs = performance.now() - similarityStart;
+      const breakdownStart = performance.now();
+      const breakdowns = await db.query<any>("select * from public.get_research_experience_breakdowns(24)");
+      const breakdownMs = performance.now() - breakdownStart;
       expect(candidates.rows).toHaveLength(50);
       expect(similarities.rows.length).toBeLessThanOrEqual(10);
+      expect(new Set(breakdowns.rows.map((row) => row.dimension))).toEqual(new Set([
+        "exchange", "category", "month", "quality", "repeat_status", "social_coverage",
+      ]));
+      expect(breakdowns.rows.length).toBeLessThanOrEqual(6 * 24);
       expect(candidateMs).toBeLessThan(10_000);
       expect(similarityMs).toBeLessThan(10_000);
+      expect(breakdownMs).toBeLessThan(10_000);
       expect((await db.query<any>("select count(*)::int count from public.market_mover_appearances")).rows[0].count).toBe(25_219);
     } finally {
       await db.close();
     }
   }, 30_000);
 });
-

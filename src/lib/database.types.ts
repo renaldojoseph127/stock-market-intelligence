@@ -1621,6 +1621,20 @@ export interface Database {
         Args: { p_dimension: string; p_limit?: number };
         Returns: Record<string, unknown>[];
       };
+      get_research_experience_breakdowns: {
+        Args: { p_limit?: number };
+        Returns: Array<{
+          dimension: string;
+          group_key: string;
+          total_appearances: number;
+          catalyst_researched: number;
+          identified_catalyst: number;
+          no_identified_catalyst: number;
+          quality_flagged: number;
+          social_researched: number;
+          social_complete: number;
+        }>;
+      };
       alert_condition_met: {
         Args: { p_condition: string; p_value: number; p_configuration: Json };
         Returns: boolean;

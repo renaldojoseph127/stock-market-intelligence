@@ -46,6 +46,47 @@ describe("Phase 2C.2 research-experience migration", () => {
       expect(priority.research_priority_reasons).toEqual(expect.arrayContaining(["Repeated mover +2", "Catalyst not researched +10", "Social coverage not researched +10"]));
       expect(Number(priority.research_priority_score)).toBeGreaterThan(50);
 
+      await db.exec(`
+        insert into public.ticker_catalyst_coverage(
+          ticker_id,date_from,date_to,source_scope_key,sources_checked,last_researched_at,
+          sec_checked,coverage_status
+        )values(
+          '10000000-0000-0000-0000-000000000001','2026-08-01','2026-08-01','test-sec','["sec"]',now(),true,
+          'complete_for_configured_sources'
+        );
+        insert into public.ticker_social_coverage(
+          ticker_id,source_id,date_from,date_to,last_researched_at,coverage_status
+        )select
+          '10000000-0000-0000-0000-000000000001',id,'2026-07-31','2026-08-02',now(),
+          'complete_for_provider_window'
+        from public.social_sources
+        order by name
+        limit 1;
+      `);
+      const allBreakdowns = (await db.query<any>("select * from public.get_research_experience_breakdowns(24)")).rows;
+      expect(new Set(allBreakdowns.map((row) => row.dimension))).toEqual(new Set([
+        "exchange", "category", "month", "quality", "repeat_status", "social_coverage",
+      ]));
+      const nasdaq = allBreakdowns.find((row) => row.dimension === "exchange" && row.group_key === "NASDAQ");
+      expect(nasdaq).toMatchObject({
+        total_appearances: 3,
+        catalyst_researched: 1,
+        identified_catalyst: 0,
+        no_identified_catalyst: 1,
+        social_researched: 1,
+        social_complete: 1,
+      });
+      const repeat = allBreakdowns.find((row) => row.dimension === "repeat_status" && row.group_key === "repeat_mover");
+      expect(repeat).toMatchObject({ total_appearances: 2 });
+      for (const dimension of ["exchange", "category", "month", "quality", "repeat_status", "social_coverage"]) {
+        const legacyRows = (await db.query<any>(
+          "select * from public.get_research_experience_breakdown($1,24) order by group_key",
+          [dimension],
+        )).rows;
+        expect(allBreakdowns.filter((row) => row.dimension === dimension).sort((a, b) => a.group_key.localeCompare(b.group_key)))
+          .toEqual(legacyRows);
+      }
+
       const first = (await db.query<any>("select * from public.find_similar_historical_movers('30000000-0000-0000-0000-000000000001',10)")).rows;
       expect(first[0]).toMatchObject({ reference_appearance_id: "30000000-0000-0000-0000-000000000002", similarity_algorithm_version: "historical-mover-similarity-v1" });
       expect(first[0].match_reasons).toEqual(expect.arrayContaining(["Same mover category", "Same exchange", "Similar price band", "Similar volume band"]));

@@ -6,7 +6,7 @@ import { SocialCoverageState } from "@/components/social-coverage-state";
 import { Badge, DataTable, EmptyState, PageHeader, StatCard, TableCell } from "@/components/ui";
 import { getCrossSourceAnalytics } from "@/lib/cross-source/queries";
 import { getWorkspacePicker } from "@/lib/research/queries";
-import { getCoverageBacklog, getResearchAnalyticsBreakdowns } from "@/lib/research-experience/queries";
+import { getCoverageBacklog, getCrossSourceResearchBreakdowns } from "@/lib/research-experience/queries";
 
 const percent = (numerator: unknown, denominator: unknown) => {
   const n = Number(numerator ?? 0);
@@ -28,7 +28,7 @@ export default async function CrossSourceAnalyticsPage({
   const params = await searchParams;
   const [result, breakdowns, backlog, workspaces] = await Promise.all([
     getCrossSourceAnalytics(),
-    getResearchAnalyticsBreakdowns(),
+    getCrossSourceResearchBreakdowns(),
     getCoverageBacklog(50, params.backlog),
     getWorkspacePicker(),
   ]);
@@ -81,4 +81,3 @@ export default async function CrossSourceAnalyticsPage({
     </>
   );
 }
-
