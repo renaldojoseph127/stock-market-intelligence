@@ -1,0 +1,1 @@
+import { FoundationPage } from "@/components/foundation-page";export default function Page(){return <FoundationPage title="Settings" description="Standalone project configuration and data-source preferences." emptyTitle="No configurable settings yet" emptyDescription="Environment configuration is documented in the README and remains server-controlled."/>}

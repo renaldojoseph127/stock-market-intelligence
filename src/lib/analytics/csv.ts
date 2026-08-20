@@ -1,0 +1,1 @@
+export function toCsv(rows:Record<string,unknown>[],columns:string[]){const q=(v:unknown)=>`"${String(v??"").replaceAll('"','""')}"`;return[columns.map(q).join(","),...rows.map(row=>columns.map(c=>q(row[c])).join(","))].join("\r\n");}

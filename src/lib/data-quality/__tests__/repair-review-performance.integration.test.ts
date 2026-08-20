@@ -1,0 +1,20 @@
+import { readFile, readdir } from "node:fs/promises";
+import path from "node:path";
+import { performance } from "node:perf_hooks";
+import { PGlite } from "@electric-sql/pglite";
+import { describe, expect, it } from "vitest";
+
+describe("Phase 2A.2.1 production-shaped review query performance",()=>{
+  it("pages 1,514 proposals over 6,458 findings and 3,906 flagged observations",async()=>{const db=new PGlite();try{await db.exec("create role anon;create role authenticated;create role service_role;");const files=(await readdir(path.join(process.cwd(),"supabase/migrations"))).filter(file=>file.endsWith(".sql")).sort();for(const file of files)await db.exec((await readFile(path.join(process.cwd(),"supabase/migrations",file),"utf8")).replace("create extension if not exists pgcrypto;",""));await db.exec(`
+    insert into public.source_reports(id,report_date,source_filename,import_status)values('91000000-0000-0000-0000-000000000001','2026-01-01','review-scale.pdf','completed');
+    insert into public.tickers(symbol)select'S'||lpad(value::text,5,'0')from generate_series(1,3906)value;
+    insert into public.market_mover_appearances(ticker_id,report_id,category_id,report_date,price,change_percent,trades,volume,dollar_volume,raw_values)
+      select t.id,'91000000-0000-0000-0000-000000000001',c.id,'2026-01-01',2121,1,100,1000,2121000,jsonb_build_object('line',t.symbol||' 2121','price','2121')from public.tickers t cross join lateral(select id from public.market_categories order by display_order limit 1)c where t.symbol like'S%';
+    insert into public.market_data_quality_findings(appearance_id,ticker_id,report_id,category_id,field_name,finding_type,severity,original_value,numeric_original_value,rule_id,rule_version,confidence_score,evidence,status)
+      select a.id,a.ticker_id,a.report_id,a.category_id,'price','possible_missing_decimal','high','2121',2121,'scale_primary_v1','2a2-v1',.95,'{"rawPriceToken":"2121"}'::jsonb,'proposed'from public.market_mover_appearances a join public.tickers t on t.id=a.ticker_id where t.symbol like'S%';
+    insert into public.market_data_quality_findings(appearance_id,ticker_id,report_id,category_id,field_name,finding_type,severity,original_value,numeric_original_value,rule_id,rule_version,confidence_score,evidence,status)
+      select a.id,a.ticker_id,a.report_id,a.category_id,'dollar_volume','cross_field_inconsistency','medium','2121000',2121000,'scale_secondary_v1','2a2-v1',.8,'{}'::jsonb,'open'from public.market_mover_appearances a join public.tickers t on t.id=a.ticker_id where t.symbol like'S%'order by t.symbol limit 2552;
+    insert into public.market_data_correction_proposals(finding_id,appearance_id,field_name,original_value,proposed_value,proposed_numeric_value,proposal_method,confidence_score,reason,evidence)
+      select f.id,f.appearance_id,'price','2121','212.1',212.1,'decimal_restoration',.95,'scale fixture','{"selectedScale":10}'::jsonb from public.market_data_quality_findings f where f.rule_id='scale_primary_v1'order by f.id limit 1514;
+  `);const started=performance.now(),summary=(await db.query<any>("select*from public.market_data_repair_review_summary")).rows[0],page=await db.query<any>("select proposal_id,ticker_symbol,review_tier,batch_approval_eligible,supporting_finding_count from public.market_data_repair_review where proposal_status='pending'and is_current order by tier_order,proposal_confidence desc,severity_rank desc limit 100"),elapsed=performance.now()-started;expect((await db.query<any>("select count(*)::int count from public.market_data_quality_findings")).rows[0].count).toBe(6458);expect((await db.query<any>("select count(distinct appearance_id)::int count from public.market_data_quality_findings")).rows[0].count).toBe(3906);expect(summary).toMatchObject({pending_proposals:1514,tier_b:1514,conflicts:0});expect(page.rows).toHaveLength(100);expect(page.rows.every(row=>row.review_tier==="B"&&row.batch_approval_eligible)).toBe(true);expect(elapsed).toBeLessThan(10_000);}finally{await db.close();}},30_000);
+});

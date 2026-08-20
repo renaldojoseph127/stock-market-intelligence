@@ -1,0 +1,2 @@
+import type { Issue,MarketRow } from "../types";
+export function validateRow(row:MarketRow){const issues:Issue[]=[];if(row.rank!=null&&(!Number.isInteger(row.rank)||row.rank<=0))issues.push({pageNumber:row.pageNumber,issueType:"invalid_numeric_value",fieldName:"rank",rawValue:String(row.rank),message:"Rank is not a positive integer.",severity:"warning"});if(!row.ticker)issues.push({pageNumber:row.pageNumber,issueType:"invalid_ticker",fieldName:"ticker",message:"Ticker is missing.",severity:"error"});return issues;}

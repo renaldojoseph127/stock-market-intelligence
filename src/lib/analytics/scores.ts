@@ -1,0 +1,5 @@
+import type { ScoreInputs } from "./analytics-types";
+const cap=(max:number,value:number)=>Math.min(max,Math.max(0,value));const round=(n:number)=>Math.round(Math.min(100,Math.max(0,n))*100)/100;
+export function recurrenceScore(x:ScoreInputs){const gap=x.averageGap==null?0:x.averageGap<=5?12:x.averageGap<=10?8:x.averageGap<=30?4:0;return round(cap(18,x.totalAppearances*2)+cap(24,x.uniqueDays*3)+cap(16,Math.max(x.gainerAppearances-1,0)*4)+cap(10,x.categories*2)+cap(12,x.last7Available*3)+gap+cap(8,x.activeMonths));}
+export function moverIntensityScore(x:ScoreInputs){return round(cap(30,(x.averageAbsoluteChange??0)*.4)+cap(24,x.extremeMoves*6)+cap(16,x.topRanks*2)+cap(15,Math.log1p(x.averageVolume??0)/1.5)+cap(15,Math.log1p(x.averageDollarVolume??0)/1.7));}
+export function researchPriorityScore(x:ScoreInputs){return round((x.recurrenceScore??recurrenceScore(x))*.35+(x.intensityScore??moverIntensityScore(x))*.30+cap(15,Math.max(x.gainerAppearances-1,0)*5)+cap(10,(x.reversals??0)*2)+cap(5,x.mostActiveToGainer??0)+cap(10,x.uniqueDays));}

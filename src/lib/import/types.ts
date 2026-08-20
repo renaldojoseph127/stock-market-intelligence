@@ -1,0 +1,5 @@
+export type ExtractionMethod="pdf_text"|"ocr"|"hybrid"|"manual"|"unknown";
+export type Issue={pageNumber?:number;issueType:string;fieldName?:string;rawValue?:string;message:string;severity:"warning"|"error"};
+export type MarketRow={category:string;ticker:string;rank:number|null;price:number|null;changeAmount:number|null;changePercent:number|null;trades:number|null;volume:number|null;dollarVolume:number|null;pageNumber:number;rawValues:Record<string,string>};
+export type ParsedReport={filename:string;fileHash:string;reportDate:string|null;extractionMethod:ExtractionMethod;extractionConfidence:number|null;pageCount:number;categories:string[];rows:MarketRow[];issues:Issue[];sourceDate?:string|null;extractionDiagnostics?:{pages:Array<Record<string,unknown>>;validationFailures:string[]}};
+export type PreviewPayload={name:string;reports:ParsedReport[];duplicates:string[];summary:{filesDetected:number;reportsDetected:number;earliestDate:string|null;latestDate:string|null;categories:string[];expectedRows:number;potentialDuplicates:number;warnings:number;errors:number}};

@@ -1,0 +1,2 @@
+export function normalizeNumber(input:string|null|undefined):number|null{if(input==null)return null;let v=input.trim().replace(/[$,%+\s,]/g,"");if(!v||/^(?:N\/?A|--?)$/i.test(v))return null;let factor=1;const suffix=v.match(/([KMB])$/i);if(suffix){factor={K:1e3,M:1e6,B:1e9}[suffix[1].toUpperCase() as "K"|"M"|"B"];v=v.slice(0,-1)}const n=Number(v);return Number.isFinite(n)?n*factor:null;}
+export function normalizeInteger(input:string|null|undefined){const n=normalizeNumber(input);return n!=null&&Number.isInteger(n)?n:null;}

@@ -1,0 +1,9 @@
+import { describe, expect, it } from "vitest";
+import { linkEventToMover, marketSessionFor } from "../temporal";
+
+describe("catalyst temporal relationships and relevance",()=>{
+  it("distinguishes New York market sessions",()=>{expect(marketSessionFor("2026-06-15T12:00:00Z")).toBe("pre_market");expect(marketSessionFor("2026-06-15T15:00:00Z")).toBe("regular_session");expect(marketSessionFor("2026-06-15T21:00:00Z")).toBe("after_hours");expect(marketSessionFor(null)).toBe("unknown")});
+  it("links precise pre-market evidence without causal language",()=>{const link=linkEventToMover({eventAt:"2026-06-15T12:00:00Z",eventDate:"2026-06-15T12:00:00Z",moverDate:"2026-06-15",isPrimarySource:true,specificClassification:true,formType:"8-K"});expect(link).toMatchObject({relationshipType:"same_day",temporalBucket:"pre_market_same_day",confidence:.95});expect(link.catalystRelevance).toBeGreaterThan(80);expect(link.reason).toMatch(/not causation/i);expect(link.scoreEvidence.scoreIsCausationProbability).toBe(false)});
+  it("does not invent a session when only a date is available",()=>{const link=linkEventToMover({eventAt:null,eventDate:"2026-06-15T00:00:00Z",moverDate:"2026-06-15",isPrimarySource:true,specificClassification:false});expect(link).toMatchObject({relationshipType:"same_day",temporalBucket:"unknown",minutesBeforeMove:null,hoursBeforeMove:null,daysBeforeMove:0,confidence:.75})});
+  it("buckets events before and after a mover",()=>{expect(linkEventToMover({eventAt:null,eventDate:"2026-06-13T00:00:00Z",moverDate:"2026-06-15",isPrimarySource:false,specificClassification:false}).temporalBucket).toBe("1_to_3_days_before");expect(linkEventToMover({eventAt:"2026-06-16T12:00:00Z",eventDate:"2026-06-16T12:00:00Z",moverDate:"2026-06-15",isPrimarySource:false,specificClassification:false}).relationshipType).toBe("followed_move")});
+});

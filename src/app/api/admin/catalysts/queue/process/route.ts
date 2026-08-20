@@ -1,0 +1,5 @@
+import { NextResponse } from "next/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { processCatalystQueue } from "@/lib/catalysts/pipeline";
+export const runtime="nodejs";export const maxDuration=60;
+export async function POST(request:Request){const db:any=createAdminClient();if(!db)return NextResponse.json({message:"Dedicated Supabase service credentials are not configured."},{status:503});let body:any={};try{body=await request.json()}catch{}try{return NextResponse.json(await processCatalystQueue(db,{queueId:body.queueId?String(body.queueId):undefined,limit:Math.max(1,Math.min(Number(body.limit)||1,5))}))}catch(error){return NextResponse.json({message:error instanceof Error?error.message:String(error)},{status:500})}}

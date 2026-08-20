@@ -1,0 +1,3 @@
+export type CategoryType="most_active"|"biggest_gainer"|"biggest_decliner";
+export type AnalyticsAppearance={id?:string;tickerId:string;date:string;categoryId:string;categoryType:CategoryType;changePercent:number|null;rank:number|null;volume:number|null;dollarVolume:number|null};
+export type ScoreInputs={totalAppearances:number;uniqueDays:number;gainerAppearances:number;categories:number;last7Available:number;averageGap:number|null;activeMonths:number;averageAbsoluteChange:number|null;extremeMoves:number;topRanks:number;averageVolume:number|null;averageDollarVolume:number|null;recurrenceScore?:number;intensityScore?:number;reversals?:number;mostActiveToGainer?:number};

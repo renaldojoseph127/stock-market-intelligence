@@ -1,0 +1,1 @@
+export function queryHref(path:string,p:Record<string,string|undefined>,changes:Record<string,string|number|undefined>){const q=new URLSearchParams();for(const [k,v] of Object.entries({...p,...changes}))if(v!=null&&v!=="")q.set(k,String(v));return`${path}?${q}`;}

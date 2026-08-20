@@ -1,0 +1,4 @@
+import type { AnalyticsAppearance } from "./analytics-types";
+const day=(s:string)=>Date.parse(`${s}T00:00:00Z`)/86400000;
+export function categoryTransitions(rows:AnalyticsAppearance[],maxDays=30){const sorted=[...rows].sort((a,b)=>a.date.localeCompare(b.date)||a.categoryId.localeCompare(b.categoryId)||(a.id??"").localeCompare(b.id??""));return sorted.slice(1).map((to,i)=>{const from=sorted[i];return{tickerId:to.tickerId,fromCategory:from.categoryType,toCategory:to.categoryType,fromDate:from.date,toDate:to.date,daysBetween:day(to.date)-day(from.date)}}).filter(x=>x.daysBetween<=maxDays);}
+export function categoryFrequency(rows:AnalyticsAppearance[]){return Object.entries(rows.reduce<Record<string,number>>((a,r)=>(a[r.categoryId]=(a[r.categoryId]??0)+1,a),{})).map(([categoryId,appearances])=>({categoryId,appearances})).sort((a,b)=>b.appearances-a.appearances);}
