@@ -43,7 +43,7 @@ Phase 2C.2 turns the existing data and coverage architecture into a historical r
 
 Research briefs always include generation time, report version, data mode, quality/catalyst/social coverage states, source report/mover/event identifiers, and limitations. Effective exports include approved overlay provenance where applicable. Causal language is avoided unless a primary source explicitly establishes it; the application uses “occurred before,” “same day,” “occurred after,” and “identified nearby catalyst.”
 
-The Phase 2C.2 migrations are `202608190001_phase_2c2_research_experience.sql` and `202608200001_phase_2c2_cross_source_breakdowns.sql`. They add `saved_research_views`, `research_questions`, `research_checklist_items`, and `research_brief_snapshots`; add workspace status and bounded derived research views/functions; and aggregate all six Cross-Source breakdown dimensions from one materialized mover base. Deploy with:
+The Phase 2C.2 migrations are `202608190001_phase_2c2_research_experience.sql`, `202608200001_phase_2c2_cross_source_breakdowns.sql`, and `202608200002_phase_2c2_cross_source_backlog.sql`. They add `saved_research_views`, `research_questions`, `research_checklist_items`, and `research_brief_snapshots`; add workspace status and bounded derived research views/functions; aggregate all six Cross-Source breakdown dimensions from one materialized mover base; and provide a bounded coverage-backlog RPC that pre-aggregates research interest once. Deploy with:
 
 ```bash
 npx supabase db push

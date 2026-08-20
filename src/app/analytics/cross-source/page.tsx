@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { CrossSourceBreakdownTables } from "@/components/cross-source-breakdown-tables";
 import { DatabaseNotice } from "@/components/database-notice";
 import { CoverageBadge, QualityBadge } from "@/components/research-experience";
 import { SaveResearchView } from "@/components/research-experience-actions";
@@ -13,12 +14,6 @@ const percent = (numerator: unknown, denominator: unknown) => {
   const d = Number(denominator ?? 0);
   return d ? `${((n / d) * 100).toFixed(1)}%` : "—";
 };
-
-const BreakdownTable = ({ rows }: { rows: any[] }) => rows.length ? (
-  <DataTable headers={["Group", "All Appearances", "Catalyst Researched", "Identified", "No Identified", "Quality Flagged", "Social Researched", "Social Complete"]}>
-    {rows.map((row) => <tr key={`${row.dimension}-${row.group_key}`}><TableCell>{row.group_key}</TableCell><TableCell>{row.total_appearances}</TableCell><TableCell>{row.catalyst_researched}<div className="text-xs muted">denominator</div></TableCell><TableCell>{row.identified_catalyst}<div className="text-xs muted">{percent(row.identified_catalyst, row.catalyst_researched)} researched</div></TableCell><TableCell>{row.no_identified_catalyst}</TableCell><TableCell>{row.quality_flagged}</TableCell><TableCell>{row.social_researched}<div className="text-xs muted">denominator</div></TableCell><TableCell>{row.social_complete}</TableCell></tr>)}
-  </DataTable>
-) : <EmptyState title="No qualifying analytics groups" description="The current persisted coverage contains no rows for this bounded breakdown." />;
 
 export default async function CrossSourceAnalyticsPage({
   searchParams,
@@ -53,9 +48,7 @@ export default async function CrossSourceAnalyticsPage({
       </section>
       <div className="my-6"><SocialCoverageState /></div>
 
-      {([[
-        "Exchange Breakdown", breakdowns.data.exchange,
-      ], ["Market Category Breakdown", breakdowns.data.category], ["Monthly Coverage", breakdowns.data.month], ["Quality State", breakdowns.data.quality], ["Repeat-Mover Status", breakdowns.data.repeat_status], ["Social Coverage Status", breakdowns.data.social_coverage]] as Array<[string, any[]]>).map(([title, rows]) => <section className="mb-8" key={title}><h2 className="mb-3 font-semibold">{title}</h2><BreakdownTable rows={rows ?? []} /></section>)}
+      <CrossSourceBreakdownTables breakdowns={breakdowns.data} />
 
       <section className="mb-8 grid gap-6 xl:grid-cols-2">
         <div><h2 className="mb-3 font-semibold">Catalyst Type Analytics</h2>{breakdowns.data.catalystTypes?.length ? <DataTable headers={["Catalyst Type", "Associated Movers", "Gainers", "Decliners", "Most Active"]}>{breakdowns.data.catalystTypes.map((row: any) => <tr key={row.catalyst_type}><TableCell>{row.catalyst_type}</TableCell><TableCell>{row.associated_appearances}</TableCell><TableCell>{row.gainer_count}</TableCell><TableCell>{row.decliner_count}</TableCell><TableCell>{row.most_active_count}</TableCell></tr>)}</DataTable> : <EmptyState title="No identified catalyst types" description="Catalyst-type metrics require linked public event evidence." />}</div>

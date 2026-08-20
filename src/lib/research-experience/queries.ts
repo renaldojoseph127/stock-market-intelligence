@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { groupCrossSourceBreakdownRows } from "./breakdowns";
 import type { ResearchDataMode } from "./types";
 
 type Envelope<T> = { data: T; configured: boolean; error: string | null };
@@ -60,11 +61,12 @@ export async function getResearchCandidates(
 }
 
 export const getCoverageBacklog = (limit = 20, backlogType?: string) =>
-  safe<any[]>([], async (db) => {
-    let query: any = db.from("research_coverage_backlog").select("*");
-    if (backlogType) query = query.eq("backlog_type", backlogType);
-    return query.order("research_priority_score", { ascending: false }).limit(Math.min(limit, 100));
-  });
+  safe<any[]>([], (db) =>
+    db.rpc("get_research_coverage_backlog", {
+      p_backlog_type: backlogType || null,
+      p_limit: Math.max(1, Math.min(Number(limit) || 20, 100)),
+    }),
+  );
 
 export const getTickerResearchProfile = (tickerId: string) =>
   safe<any>(null, (db) =>
@@ -158,36 +160,49 @@ export const getSavedResearchViews = () =>
   );
 
 export const getCrossSourceResearchBreakdowns = () =>
-  safe<any>({}, async (db) => {
-    const dimensions = ["exchange", "category", "month", "quality", "repeat_status", "social_coverage"];
-    const [breakdowns, catalystTypes, catalystTiming, qualityFields, repairMethods] = await Promise.all([
-      db.rpc("get_research_experience_breakdowns", { p_limit: 24 }),
-      db.from("catalyst_type_performance").select("*").order("associated_appearances", { ascending: false }).limit(50),
-      db.from("catalyst_timing_distribution").select("*").order("mover_appearances", { ascending: false }).limit(50),
-      db.from("research_quality_field_counts").select("*").order("finding_count", { ascending: false }).limit(100),
-      db.from("research_repair_method_counts").select("*").order("proposal_count", { ascending: false }).limit(100),
-    ]);
-    const rows = breakdowns.data ?? [];
-    return {
-      data: {
-        ...Object.fromEntries(
-          dimensions.map((dimension) => [
-            dimension,
-            rows.filter((row: any) => row.dimension === dimension),
-          ]),
-        ),
-        catalystTypes: catalystTypes.data ?? [],
-        catalystTiming: catalystTiming.data ?? [],
-        qualityFields: qualityFields.data ?? [],
-        repairMethods: repairMethods.data ?? [],
-      },
-      error: breakdowns.error ?? catalystTypes.error ?? catalystTiming.error ?? qualityFields.error ?? repairMethods.error ?? null,
-    };
-  });
+  safe<any>(
+    {
+      exchange: [],
+      category: [],
+      month: [],
+      quality: [],
+      repeat_status: [],
+      social_coverage: [],
+      catalystTypes: [],
+      catalystTiming: [],
+      qualityFields: [],
+      repairMethods: [],
+    },
+    async (db) => {
+      const [breakdowns, catalystTypes, catalystTiming, qualityFields, repairMethods] = await Promise.all([
+        db.rpc("get_research_experience_breakdowns", { p_limit: 24 }),
+        db.from("catalyst_type_performance").select("*").order("associated_appearances", { ascending: false }).limit(50),
+        db.from("catalyst_timing_distribution").select("*").order("mover_appearances", { ascending: false }).limit(50),
+        db.from("research_quality_field_counts").select("*").order("finding_count", { ascending: false }).limit(100),
+        db.from("research_repair_method_counts").select("*").order("proposal_count", { ascending: false }).limit(100),
+      ]);
+      const grouped = groupCrossSourceBreakdownRows(breakdowns.data);
+      return {
+        data: {
+          exchange: grouped.exchange,
+          category: grouped.category,
+          month: grouped.month,
+          quality: grouped.quality,
+          repeat_status: grouped.repeat_status,
+          social_coverage: grouped.social_coverage,
+          catalystTypes: catalystTypes.data ?? [],
+          catalystTiming: catalystTiming.data ?? [],
+          qualityFields: qualityFields.data ?? [],
+          repairMethods: repairMethods.data ?? [],
+        },
+        error: breakdowns.error ?? catalystTypes.error ?? catalystTiming.error ?? qualityFields.error ?? repairMethods.error ?? null,
+      };
+    },
+  );
 
 export async function getSystemStatus() {
   return safe<any>(
-    { counts: {}, queues: {}, latestRuns: {}, migrations: { expectedLatest: "202608200001", applied: null } },
+    { counts: {}, queues: {}, latestRuns: {}, migrations: { expectedLatest: "202608200002", applied: null } },
     async (db) => {
       const countTables = [
         "source_reports",
@@ -211,7 +226,7 @@ export async function getSystemStatus() {
           counts: Object.fromEntries(countTables.map((table, index) => [table, counts[index].count ?? 0])),
           queues: Object.fromEntries(queueTables.map((table, index) => [table, queues[index].data ?? []])),
           latestRuns: { imports: latest[0].data, metadata: latest[1].data, catalysts: latest[2].data, social: latest[3].data },
-          migrations: { expectedLatest: "202608200001", applied: null },
+          migrations: { expectedLatest: "202608200002", applied: null },
         },
         error: counts.find((result) => result.error)?.error ?? queues.find((result) => result.error)?.error ?? latest.find((result) => result.error)?.error ?? null,
       };

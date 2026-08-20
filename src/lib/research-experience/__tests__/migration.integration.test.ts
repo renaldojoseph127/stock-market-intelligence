@@ -62,6 +62,13 @@ describe("Phase 2C.2 research-experience migration", () => {
         from public.social_sources
         order by name
         limit 1;
+        insert into public.research_workspaces(id,name,status)
+          values('80000000-0000-0000-0000-000000000002','NVDA backlog interest','active');
+        insert into public.research_workspace_items(workspace_id,item_type,name,ticker_id)
+          values(
+            '80000000-0000-0000-0000-000000000002','ticker','NVDA interest',
+            '10000000-0000-0000-0000-000000000001'
+          );
       `);
       const allBreakdowns = (await db.query<any>("select * from public.get_research_experience_breakdowns(24)")).rows;
       expect(new Set(allBreakdowns.map((row) => row.dimension))).toEqual(new Set([
@@ -86,6 +93,25 @@ describe("Phase 2C.2 research-experience migration", () => {
         expect(allBreakdowns.filter((row) => row.dimension === dimension).sort((a, b) => a.group_key.localeCompare(b.group_key)))
           .toEqual(legacyRows);
       }
+
+      const backlogProjection = `appearance_id,ticker_id,symbol,report_date,category_name,
+        catalyst_status,social_coverage_status,quality_status,research_priority_score,backlog_type`;
+      const legacyBacklog = (await db.query<any>(`
+        select ${backlogProjection}
+        from public.research_coverage_backlog
+        order by research_priority_score desc,report_date desc,appearance_id
+        limit 50
+      `)).rows;
+      const boundedBacklog = (await db.query<any>(
+        "select * from public.get_research_coverage_backlog(null,50)",
+      )).rows;
+      expect(boundedBacklog).toEqual(legacyBacklog);
+      const filteredBacklog = (await db.query<any>(
+        "select * from public.get_research_coverage_backlog($1::text,2)",
+        [legacyBacklog[0].backlog_type],
+      )).rows;
+      expect(filteredBacklog.length).toBeLessThanOrEqual(2);
+      expect(filteredBacklog.every((row) => row.backlog_type === legacyBacklog[0].backlog_type)).toBe(true);
 
       const first = (await db.query<any>("select * from public.find_similar_historical_movers('30000000-0000-0000-0000-000000000001',10)")).rows;
       expect(first[0]).toMatchObject({ reference_appearance_id: "30000000-0000-0000-0000-000000000002", similarity_algorithm_version: "historical-mover-similarity-v1" });

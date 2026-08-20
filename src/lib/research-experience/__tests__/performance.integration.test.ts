@@ -36,15 +36,22 @@ describe("Phase 2C.2 production-shaped bounded-query performance", () => {
       const breakdownStart = performance.now();
       const breakdowns = await db.query<any>("select * from public.get_research_experience_breakdowns(24)");
       const breakdownMs = performance.now() - breakdownStart;
+      const backlogStart = performance.now();
+      const backlog = await db.query<any>("select * from public.get_research_coverage_backlog(null,50)");
+      const backlogMs = performance.now() - backlogStart;
       expect(candidates.rows).toHaveLength(50);
       expect(similarities.rows.length).toBeLessThanOrEqual(10);
       expect(new Set(breakdowns.rows.map((row) => row.dimension))).toEqual(new Set([
         "exchange", "category", "month", "quality", "repeat_status", "social_coverage",
       ]));
       expect(breakdowns.rows.length).toBeLessThanOrEqual(6 * 24);
+      expect(backlog.rows.length).toBeLessThanOrEqual(50);
+      expect(backlog.rows.every((row) => row.backlog_type && row.research_priority_score != null)).toBe(true);
       expect(candidateMs).toBeLessThan(10_000);
       expect(similarityMs).toBeLessThan(10_000);
       expect(breakdownMs).toBeLessThan(10_000);
+      expect(backlogMs).toBeLessThan(10_000);
+      console.info(JSON.stringify({ candidateMs, similarityMs, breakdownMs, backlogMs }));
       expect((await db.query<any>("select count(*)::int count from public.market_mover_appearances")).rows[0].count).toBe(25_219);
     } finally {
       await db.close();

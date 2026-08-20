@@ -1635,6 +1635,21 @@ export interface Database {
           social_complete: number;
         }>;
       };
+      get_research_coverage_backlog: {
+        Args: { p_backlog_type?: string | null; p_limit?: number };
+        Returns: Array<{
+          appearance_id: string;
+          ticker_id: string;
+          symbol: string;
+          report_date: string;
+          category_name: string;
+          catalyst_status: string;
+          social_coverage_status: string;
+          quality_status: string;
+          research_priority_score: number;
+          backlog_type: string;
+        }>;
+      };
       alert_condition_met: {
         Args: { p_condition: string; p_value: number; p_configuration: Json };
         Returns: boolean;
