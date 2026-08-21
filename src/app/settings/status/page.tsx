@@ -6,6 +6,7 @@ import { catalystConfig, validSecUserAgent } from "@/lib/catalysts/config";
 import { providerReadiness } from "@/lib/ticker-enrichment/providers";
 
 export const dynamic = "force-dynamic";
+const EXPECTED_LATEST_MIGRATION = "20260821014027_phase_2d_data_quality_resolution";
 
 const aggregate = (rows: any[]) =>
   rows.reduce((acc: Record<string, number>, row) => {
@@ -61,7 +62,7 @@ export default async function SystemStatusPage() {
 
       <section className="panel mt-8 p-5 text-sm">
         <h2 className="font-semibold">Migration Readiness</h2>
-        <p className="mt-2 muted">Application source expects migration {result.data.migrations?.expectedLatest ?? "202608200002"}. Hosted migration application is verified during deployment with the Supabase CLI; migration history and credentials are not exposed through this page.</p>
+        <p className="mt-2 muted">Application source expects migration {EXPECTED_LATEST_MIGRATION}. Hosted migration application is verified during deployment with the Supabase CLI; migration history and credentials are not exposed through this page.</p>
       </section>
     </>
   );
