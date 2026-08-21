@@ -10,6 +10,6 @@ export async function POST(request: Request) {
   if (items.length < 1 || items.length > REPAIR_REVIEW_BATCH_MAX) return NextResponse.json({ message: `Select 1-${REPAIR_REVIEW_BATCH_MAX} proposals.` }, { status: 400 });
   if (new Set(items.map((item:any) => item?.proposalId)).size !== items.length) return NextResponse.json({ message: "Duplicate proposal IDs are not allowed." }, { status: 400 });
   if (!reviewer || !note || items.some((item:any) => !item?.proposalId || !item?.updatedAt)) return NextResponse.json({ message: "Reviewer, review note, proposal IDs, and optimistic versions are required." }, { status: 400 });
-  const { data, error } = await db.rpc("review_market_data_proposal_batch", { p_action: "approve", p_items: items, p_reviewed_by: reviewer, p_reason: note, p_rejection_reason: null });
+  const { data, error } = await db.rpc("review_market_data_resolution_batch", { p_items: items, p_reviewed_by: reviewer, p_reason: note });
   return NextResponse.json(error ? { message: error.message } : data, { status: error ? 409 : 200 });
 }

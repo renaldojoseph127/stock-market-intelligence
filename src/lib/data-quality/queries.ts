@@ -3,6 +3,7 @@ export { qualityDataMode } from "./types";
 
 export const QUALITY_PAGE_SIZE = 50;
 export const REPAIR_REVIEW_PAGE_SIZE = 50;
+export const RESOLUTION_QUEUE_PAGE_SIZE = 50;
 type Search = Record<string, string | undefined>;
 const pageNumber = (search: Search) => Math.max(1, Number(search.page) || 1);
 const boundedPageSize = (search: Search) => Math.min(100, Math.max(1, Number(search.pageSize) || REPAIR_REVIEW_PAGE_SIZE));
@@ -53,12 +54,13 @@ export async function getQualityFinding(id: string) {
 export async function getRepairReview(search: Search = {}) {
   const db:any = await createClient(), page = pageNumber(search), pageSize = boundedPageSize(search), fallback = { summary: null as any, proposals: [] as any[], grouped: {} as Record<string, any[]>, categories: [] as any[], page, pageSize, count: 0 };
   if (!db) return { data: fallback, configured: false, error: null };
-  let query:any = db.from("market_data_repair_review").select("*", { count: "exact" });
+  let query:any = db.from("market_data_resolution_proposals").select("*", { count: "exact" });
   const status = search.status || "pending";if (status !== "all") query = query.eq("proposal_status", status);if (status === "pending") query = query.eq("is_current", true);
   if (search.ticker) query = query.eq("ticker_symbol", search.ticker.trim().toUpperCase());
   if (search.from) query = query.gte("report_date", search.from);if (search.to) query = query.lte("report_date", search.to);
   if (search.category) query = query.eq("category_id", search.category);if (search.field) query = query.eq("field_name", search.field);
   if (search.findingType) query = query.eq("finding_type", search.findingType);if (search.method) query = query.eq("proposal_method", search.method);
+  if (search.confidenceBand) query = query.eq("confidence_band", search.confidenceBand.toUpperCase());if (search.priority) query = query.eq("priority_band", search.priority);
   if (search.tier) query = query.eq("review_tier", search.tier);if (search.severity) query = query.eq("severity", search.severity);
   if (search.minConfidence) query = query.gte("proposal_confidence", Number(search.minConfidence));if (search.maxConfidence) query = query.lte("proposal_confidence", Number(search.maxConfidence));
   if (search.conflict === "yes") query = query.eq("has_conflict", true);if (search.conflict === "no") query = query.eq("has_conflict", false);
@@ -72,7 +74,8 @@ export async function getRepairReview(search: Search = {}) {
     case "tier": query = query.order("tier_order").order("proposal_confidence", { ascending: false });break;
     case "newest": query = query.order("finding_detected_at", { ascending: false });break;
     case "oldest": query = query.order("finding_detected_at", { ascending: true });break;
-    default: query = query.order("tier_order").order("proposal_confidence", { ascending: false }).order("severity_rank", { ascending: false });
+    case "priority": query = query.order("resolution_priority_score", { ascending: false }).order("proposal_confidence", { ascending: false });break;
+    default: query = query.order("resolution_priority_score", { ascending: false }).order("tier_order").order("proposal_confidence", { ascending: false });
   }
   const [summary, rows, categories] = await Promise.all([
     db.from("market_data_repair_review_summary").select("*").maybeSingle(),
@@ -81,7 +84,7 @@ export async function getRepairReview(search: Search = {}) {
   ]);
   const proposals = rows.data ?? [], groupIds = [...new Set(proposals.filter((row:any) => row.review_tier === "C").map((row:any) => row.appearance_id))];
   let groupedRows:any[] = [], groupError:any = null;
-  if (groupIds.length) { const result = await db.from("market_data_repair_review").select("*").in("appearance_id", groupIds).eq("proposal_status", "pending").eq("is_current", true).eq("base_review_tier", "C").order("field_name").limit(500);groupedRows = result.data ?? [];groupError = result.error; }
+  if (groupIds.length) { const result = await db.from("market_data_resolution_proposals").select("*").in("appearance_id", groupIds).eq("proposal_status", "pending").eq("is_current", true).eq("base_review_tier", "C").order("field_name").limit(500);groupedRows = result.data ?? [];groupError = result.error; }
   const grouped = Object.fromEntries([...Map.groupBy(groupedRows, (row:any) => String(row.appearance_id)).entries()]);
   const error = summary.error ?? rows.error ?? categories.error ?? groupError;
   return { data: { summary: summary.data, proposals, grouped, categories: categories.data ?? [], page, pageSize, count: rows.count ?? 0 }, configured: true, error: error?.message ?? null };
@@ -111,4 +114,30 @@ export async function getReportQuality(reportId: string) {
 export async function getQualitySummary() {
   const db:any = await createClient();if (!db) return { data: null as any, configured: false, error: null };
   const result = await db.from("market_data_quality_dashboard").select("*").maybeSingle();return { data: result.data, configured: true, error: result.error?.message ?? null };
+}
+
+function decodeResolutionCursor(value: string | undefined) {
+  if (!value) return { priority: null, findingId: null };
+  const [priority, findingId] = value.split(":");
+  return Number.isFinite(Number(priority)) && findingId ? { priority: Number(priority), findingId } : { priority: null, findingId: null };
+}
+
+export async function getDataQualityResolution(search: Search = {}) {
+  const db:any = await createClient(), pageSize = Math.min(100, Math.max(1, Number(search.pageSize) || RESOLUTION_QUEUE_PAGE_SIZE));
+  const fallback = { summary: null as any, rows: [] as any[], breakdowns: [] as any[], pageSize, nextCursor: null as string | null };
+  if (!db) return { data: fallback, configured: false, error: null };
+  const cursor = decodeResolutionCursor(search.cursor), args = {
+    p_ticker: search.ticker || null, p_date_from: search.from || null, p_date_to: search.to || null,
+    p_field: search.field || null, p_finding_type: search.findingType || null, p_repair_method: search.method || null,
+    p_confidence_band: search.confidenceBand || null, p_status: search.status || "unresolved", p_priority: search.priority || null,
+    p_cursor_priority: cursor.priority, p_cursor_finding_id: cursor.findingId, p_limit: pageSize,
+  };
+  const [summary, queue, breakdowns] = await Promise.all([
+    db.rpc("get_market_data_resolution_summary"),
+    db.rpc("get_market_data_resolution_queue", args),
+    db.rpc("get_market_data_resolution_breakdowns", { p_limit: 24 }),
+  ]);
+  const rows = queue.data ?? [], last = rows.at(-1), nextCursor = rows.length === pageSize && last ? `${last.resolution_priority_score}:${last.finding_id}` : null;
+  const error = summary.error ?? queue.error ?? breakdowns.error;
+  return { data: { summary: summary.data?.[0] ?? null, rows, breakdowns: breakdowns.data ?? [], pageSize, nextCursor }, configured: true, error: error?.message ?? null };
 }

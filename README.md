@@ -411,6 +411,24 @@ Routes are `/events/[id]`, `/analytics/catalysts`, `/analytics/catalysts/drill-d
 
 AI Research routes catalyst questions only through the fixed `execute_catalyst_research_query` function; it never generates arbitrary SQL. Results cite stored events/movers, disclose source/date coverage and limitations, and reframe causal requests as evidence and timing research. Existing workspaces accept saved events, filings, catalyst comparisons, and timelines. Existing exports serialize the returned evidence and coverage fields, and existing alerts may consume newly persisted filing/catalyst events without adding external polling.
 
+## Phase 2D data-quality resolution and confidence engine
+
+Phase 2D extends the existing Phase 2A.2/2A.2.1 finding, proposal, effective-value, repair-log, and recomputation lifecycle. It does not introduce a second correction store and never updates imported `market_mover_appearances`. RAW remains the application default. Approval writes only a reversible, provenance-linked EFFECTIVE overlay and queues targeted derived recomputation.
+
+`/data-quality/resolution` is the bounded priority queue and coverage dashboard. Its keyset-paginated RPC returns at most 100 rows and supports ticker, report-date, field, finding type, repair method, confidence band, lifecycle status, and priority filters. The priority score combines analytical field impact, detector confidence, finding type, repeat-mover relevance, and the presence of a deterministic look-ahead-safe candidate. The score is triage order, not a probability of correctness.
+
+Confidence is explicit: HIGH is at least 0.90, MEDIUM is 0.70–0.89, and LOW is below 0.70. Decimal restoration, same-row column realignment, same-row cross-field consistency assistance, and prior-only ticker-sequence assistance use `data-quality-resolution-v1`. Cross-field and sequence candidates are capped below HIGH and remain individual/manual review because source calculation methodology, splits, and other corporate actions can make an apparent inconsistency legitimate. Insufficient evidence produces no proposed value.
+
+Look-ahead safety is enforced twice. The audit engine now supplies only observations strictly earlier than the appearance report date. Every newly generated proposal records its as-of date, evidence policy, engine version, warnings, and explicit false values for future returns, later prices, later discussion, and later outcomes. Existing decimal proposals without a prior-only or same-day-only marker remain visible but are excluded from Phase 2D bulk approval until regenerated safely.
+
+Every resolution row exposes appearance/ticker/date/field, RAW and proposed values, method, confidence/band, evidence/reason, status, source filename/page/OCR provenance, warnings, and a projected before/after impact packet. Impact packets disclose RAW immutability and describe magnitude/direction consistency, the `historical-research-priority-v1` magnitude component, repeat-mover recomputation, affected `historical-mover-similarity-v1` dimensions, and price/volume/dollar-volume metrics. They never claim that the projected EFFECTIVE result changed RAW analytics.
+
+`/data-quality/review` reuses the existing optimistic, audited batch lifecycle and adds resolution priority/confidence filters and impact evidence. Ordinary bulk approval remains limited to 25 explicitly selected high-confidence decimal/source-normalization proposals that are current, conflict-free, look-ahead-safe, and source-backed. Coordinated column realignment remains atomic through the existing grouped-row transaction. Rejection and reversion remain fully audited.
+
+Coverage RPCs report unresolved findings, repairable HIGH candidates, MEDIUM review work, LOW/manual work, approved overlays, affected appearances, clean RAW coverage, EFFECTIVE overlay coverage, and breakdowns by field, finding type, method, confidence, and status. The migration is `20260821014027_phase_2d_data_quality_resolution.sql`; it must be applied to the dedicated hosted Supabase project only after separate deployment approval.
+
+Reddit remains disabled and approval-pending. Phase 2D makes no provider calls and creates no social records.
+
 ## Verification
 
 ```bash
@@ -439,6 +457,8 @@ npm run build
 15. Phase 2B — Historical News, SEC Filings & Catalyst Intelligence — IMPLEMENTED; hosted migration pending
 16. Phase 2C — Historical Social Intelligence & Reddit Research — IMPLEMENTED; current Devvit access adaptation complete, hosted migrations/Reddit approval/manual smoke test pending
 17. Phase 2C.1 — Cross-Source Intelligence & Social-Ready Research Layer — IMPLEMENTED; hosted migration and production smoke test pending
+18. Phase 2C.2 — Research Experience & Commercial Readiness — PRODUCTION VERIFIED
+19. Phase 2D — Data Quality Resolution & Confidence Engine — IMPLEMENTED; hosted migration intentionally not applied
 
 ## Phase 2C historical social intelligence
 
@@ -518,4 +538,4 @@ AI Search recognizes cross-source timeline, catalysts-before/after-move, no-iden
 4. When Reddit approves the exact use, install the approved Devvit app, create its managed token, configure `DEVVIT_REDDIT_BRIDGE_URL` and server-only `DEVVIT_REDDIT_MANAGED_TOKEN`, set `REDDIT_PROVIDER_MODE=devvit_bridge`, and only then set `DEVVIT_REDDIT_ACCESS_APPROVED=true`.
 5. Deploy and run one bounded preview first. Confirm its query/window estimate, queue one approved request, and inspect request, coverage, cache, provenance, deletion, and budget records before any broader manual work. Do not bulk-enrich or backfill the universe.
 
-The current limitation is intentional: no live Reddit collection or production social evidence is added while approval is pending. Provider historical search remains non-exhaustive even after activation, so Reddit results are expected to remain `provider_limited`. Phase 2D and all later-provider ingestion remain out of scope.
+The current limitation is intentional: no live Reddit collection or production social evidence is added while approval is pending. Provider historical search remains non-exhaustive even after activation, so Reddit results are expected to remain `provider_limited`. Later-provider ingestion remains out of scope.

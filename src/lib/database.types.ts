@@ -1344,6 +1344,8 @@ export interface Database {
       market_mover_appearances_effective: GenericView;
       market_data_source_evidence: GenericView;
       market_data_ticker_quality_summary: GenericView;
+      market_data_resolution_queue: GenericView;
+      market_data_resolution_proposals: GenericView;
       market_data_report_quality_summary: GenericView;
       market_data_quality_dashboard: GenericView;
       market_data_repair_review: GenericView;
@@ -1461,6 +1463,29 @@ export interface Database {
         };
         Returns: Json;
       };
+      review_market_data_resolution_batch: {
+        Args: { p_items: Json; p_reviewed_by: string; p_reason: string };
+        Returns: Json;
+      };
+      get_market_data_resolution_queue: {
+        Args: {
+          p_ticker?: string | null;
+          p_date_from?: string | null;
+          p_date_to?: string | null;
+          p_field?: string | null;
+          p_finding_type?: string | null;
+          p_repair_method?: string | null;
+          p_confidence_band?: string | null;
+          p_status?: string | null;
+          p_priority?: string | null;
+          p_cursor_priority?: number | null;
+          p_cursor_finding_id?: string | null;
+          p_limit?: number;
+        };
+        Returns: Record<string, unknown>[];
+      };
+      get_market_data_resolution_summary: { Args: Record<never, never>; Returns: Record<string, unknown>[] };
+      get_market_data_resolution_breakdowns: { Args: { p_limit?: number }; Returns: Record<string, unknown>[] };
       review_market_data_proposal_group: {
         Args: {
           p_action: string;

@@ -114,7 +114,7 @@ const navigation = [
       ["Research History", "/research-history"],
     ],
   },
-  { label: "Data Quality", href: "/data-quality", icon: ShieldCheck },
+  { label: "Data Quality", href: "/data-quality", icon: ShieldCheck, children: [["Resolution Engine", "/data-quality/resolution"], ["Batch Repair Review", "/data-quality/review"], ["Approved Overlays", "/data-quality/repairs"]] },
   { label: "Data Imports", href: "/imports", icon: Database },
   {
     label: "Settings",
